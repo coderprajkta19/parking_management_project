@@ -11,5 +11,5 @@ Tech Stack
 Python
 FastAPI
 SQLAlchemy
-SQLite / Database
+PostgreSQL / Database
 HTML, CSS (for basic frontend)
