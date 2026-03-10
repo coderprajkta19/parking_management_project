@@ -1,0 +1,330 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Parking Management</title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        background-color: #f5f7fa;
+        margin: 0;
+        padding: 20px;
+      }
+      h1 {
+        color: white;
+        background-color: #28a745;
+        padding: 20px;
+        text-align: center;
+        border-radius: 8px;
+      }
+      .container {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 20px;
+        justify-content: center;
+        margin-top: 20px;
+      }
+      .card {
+        background: white;
+        border-radius: 10px;
+        box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        padding: 20px;
+        width: 350px;
+      }
+      .card h3 {
+        margin-top: 0;
+      }
+      button {
+        background-color: #28a745;
+        color: white;
+        border: none;
+        padding: 10px 15px;
+        cursor: pointer;
+        border-radius: 5px;
+        margin-top: 10px;
+      }
+      input,
+      select {
+        padding: 8px;
+        width: 100%;
+        margin-top: 5px;
+        margin-bottom: 10px;
+        border: 1px solid #ccc;
+        border-radius: 4px;
+      }
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-top: 10px;
+      }
+      th,
+      td {
+        border: 1px solid #ccc;
+        padding: 8px;
+        text-align: left;
+      }
+      th {
+        background-color: #e9ecef;
+      }
+      
+    </style>
+  </head>
+  <body>
+    <h1>Parking Management</h1>
+
+    <div class="container">
+      <div class="card">
+        <h3>All Parking Spaces (Available & Occupied)</h3>
+        <button onclick="loadAllSpaces()">All Parking Spaces</button>
+        <table id="allSpacesTable">
+          <thead>
+            <tr>
+              <th>Level</th>
+              <th>Spot</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+  
+      <div class="card">
+        <h3>All Empty Parking Spaces</h3>
+        <button onclick="loadEmptySpaces()">Empty Parking Spaces</button>
+        <table id="emptySpacesTable">
+          <thead>
+            <tr>
+              <th>Level</th>
+              <th>Spot</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+
+      <div class="card">
+        <h3>Empty Parking Spaces by Level</h3>
+        <label>Choose Level:</label>
+        <select id="levelSelect">
+          <option value="">--Select Level--</option>
+          <option value="1">Level 1</option>
+          <option value="2">Level 2</option>
+          <option value="3">Level 3</option>
+        </select>
+        <button onclick="loadEmptyByLevel()">
+          Empty Parking Spaces by Level
+        </button>
+        <table id="emptyLevelTable">
+          <thead>
+            <tr>
+              <th>Level</th>
+              <th>Spot</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+
+      <div class="card">
+        <h3>Update Availability (Car Exit)</h3>
+        <label>Choose Level:</label>
+        <select id="updateLevel">
+          <option value="">--Select Level--</option>
+          <option value="1">Level 1</option>
+          <option value="2">Level 2</option>
+          <option value="3">Level 3</option>
+        </select>
+        <input
+          type="number"
+          id="updateSpotNumber"
+          placeholder="Spot Number (e.g. 1)"
+        />
+        <label>Status:</label>
+        <div>
+          <label
+            ><input type="radio" name="status" value="true" checked />
+            Available</label
+          >
+          <label
+            ><input type="radio" name="status" value="false" /> Occupied</label
+          >
+        </div>
+        <button onclick="updateSpot()">Update Spot Status</button>
+
+        <p id="updateResult"></p>
+      </div>
+
+     
+      <div class="card">
+        <h3>Parking Capacity Status</h3>
+        <button onclick="checkFull()">Check Full Capacity</button>
+        <p id="capacityStatus" style="font-weight: bold; margin-top: 10px; color: #dc3545;"></p>
+
+      </div>
+    </div>
+
+    <script>
+      const api = "";
+
+      let hasLoadedAllSpaces = false;
+      let hasLoadedEmptySpaces = false;
+      let hasLoadedParkingCapacity = false;
+
+      function renderTable(data, tableId) {
+        const tbody = document.querySelector(`#${tableId} tbody`);
+        data.sort((a, b) => a.level - b.level || a.spot_number - b.spot_number);
+        tbody.innerHTML = data.length
+          ? data
+              .map(
+                (item) => `
+        <tr>
+          <td>${item.level}</td>
+          <td>${item.spot_number}</td>
+          <td>${item.is_available ? "parking available" : "occupied"}</td>
+        </tr>`
+              )
+              .join("")
+          : `<tr><td colspan="3">No data found</td></tr>`;
+      }
+
+      async function loadAllSpaces() {
+        hasLoadedAllSpaces = true;
+        try {
+          const res = await fetch(`${api}/parking-spaces`);
+          const data = await res.json();
+          renderTable(data, "allSpacesTable");
+        } catch (err) {
+          alert("Failed to load all parking spaces.");
+          console.error(err);
+        }
+      }
+
+      async function loadEmptySpaces() {
+        hasLoadedEmptySpaces = true;
+        try {
+          const res = await fetch(`${api}/parking-spaces/empty`);
+          const data = await res.json();
+          renderTable(data, "emptySpacesTable");
+        } catch (err) {
+          alert("Failed to load empty spaces.");
+          console.error(err);
+        }
+      }
+
+      async function loadEmptyByLevel() {
+        const level = document.getElementById("levelSelect").value;
+        if (!level) {
+          alert("Please select a level.");
+          return;
+        }
+        try {
+          const res = await fetch(`${api}/parking-spaces/empty/${level}`);
+          const data = await res.json();
+          renderTable(data, "emptyLevelTable");
+        } catch (err) {
+          alert("Failed to load data by level.");
+          console.error(err);
+        }
+      }
+
+      async function updateSpot() {
+        const levelStr = document.getElementById("updateLevel").value;
+        const spotStr = document.getElementById("updateSpotNumber").value;
+        const statusValue = document.querySelector(
+          "input[name='status']:checked"
+        );
+
+        const resultEl = document.getElementById("updateResult");
+
+        if (!levelStr || !spotStr || !statusValue) {
+          alert(
+            "Please enter both level and spot number, and select a status."
+          );
+          return;
+        }
+
+        const level = parseInt(levelStr);
+        const spotNum = parseInt(spotStr);
+        const newStatus = statusValue.value === "true"; 
+
+        try {
+          const allSpaces = await fetch(`${api}/parking-spaces`);
+          const allData = await allSpaces.json();
+
+          const matched = allData.find(
+            (s) => s.level === level && s.spot_number === spotNum
+          );
+
+          if (!matched) {
+            resultEl.innerText = `❌ Spot ${spotNum} on Level ${level} not found.`;
+            resultEl.style.color = "red";
+            return;
+          }
+          if (matched.is_available === newStatus) {
+            resultEl.innerText = newStatus
+              ? `ℹ️ Spot ${spotNum} on Level ${level} is already Available.`
+              : `ℹ️ Spot ${spotNum} on Level ${level} is already Occupied.`;
+            resultEl.style.color = "orange";
+            return;
+          }
+
+        
+          const res = await fetch(`${api}/parking-spaces/update`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              spot_id: matched.id,
+              level: matched.level,
+              spot_number: matched.spot_number,
+              is_available: newStatus,
+            }),
+          });
+
+          if (!res.ok) throw new Error("Failed to update");
+
+          const data = await res.json();
+
+          resultEl.innerText = `✅ Spot ${data.spot_number} on Level ${
+            data.level
+          } updated to: ${data.is_available ? "Available" : "Occupied"}`;
+          resultEl.style.color = "green";
+        
+          if (hasLoadedAllSpaces) loadAllSpaces();
+          if (hasLoadedEmptySpaces) loadEmptySpaces();
+
+          const selectedLevel = document.getElementById("levelSelect").value;
+          if (selectedLevel) loadEmptyByLevel();
+
+          if (hasLoadedParkingCapacity) checkFull(); 
+        } catch (err) {
+          alert("Error updating spot.");
+          console.error(err);
+        }
+      }
+
+      async function checkFull() {
+        try {
+    const res = await fetch(`${api}/parking-spaces/full-capacity`);
+    if (!res.ok) {
+      const errorData = await res.json(); 
+      document.getElementById("capacityStatus").innerText = 
+        "! " + errorData.detail; 
+      return; 
+    }
+    const data = await res.json();
+    if (data.full) {
+      document.getElementById("capacityStatus").innerText = "🚫 Parking is FULL!";
+    } else {
+      document.getElementById("capacityStatus").innerText = "✅ Parking is available.";
+    }
+
+  } catch (error) {
+    alert("Something went wrong while checking parking status.");
+    console.log(error);
+        }
+      }
+    </script>
+  </body>
+</html>
